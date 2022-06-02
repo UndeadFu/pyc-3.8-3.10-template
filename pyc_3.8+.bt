@@ -1,0 +1,196 @@
+//------------------------------------------------
+//--- 010 Editor v12.0.1 Binary Template
+//
+//      File: 
+//   Authors: francisfu
+//   Version: v0.0.0
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   Website:https://github.com/UndeadFu/pyc-3.8-3.10-template
+//------------------------------------------------
+LittleEndian();
+typedef enum<uchar>{
+    TYPE_NULL              = '0',
+    TYPE_NONE              = 'N',
+    TYPE_FALSE             = 'F',
+    TYPE_TRUE              = 'T',
+    TYPE_STOPITER          = 'S',
+    TYPE_ELLIPSIS          = '.',
+    TYPE_INT               = 'i',
+    TYPE_INT64             = 'I',
+    TYPE_FLOAT             = 'f',
+    TYPE_BINARY_FLOAT      = 'g',
+    TYPE_COMPLEX           = 'x',
+    TYPE_BINARY_COMPLEX    = 'y',
+    TYPE_LONG              = 'l',
+    TYPE_STRING            = 's',
+    TYPE_INTERNED          = 't',
+    TYPE_REF               = 'r',
+    TYPE_TUPLE             = '(',
+    TYPE_LIST              = '[',
+    TYPE_DICT              = '{',
+    TYPE_CODE              = 'c',
+    TYPE_UNICODE           = 'u',
+    TYPE_UNKNOWN           = '?',
+    TYPE_SET               = '<',
+    TYPE_FROZENSET         = '>',
+   // FLAG_REF                '\x80'
+
+    TYPE_ASCII             = 'a',
+    TYPE_ASCII_INTERNED    = 'A',
+    TYPE_SMALL_TUPLE       = ')',
+    TYPE_SHORT_ASCII       = 'z',
+    TYPE_SHORT_ASCII_INTERNED = 'Z',   
+}PY_TYPE;
+
+
+typedef struct {
+    uint time;
+} utime<read=PycHeaderTimeReader>;
+string PycHeaderTimeReader(utime &t){
+    return TimeTToString(t.time, "yyyy/MM/dd hh:mm:ss");
+}
+
+typedef struct {
+    uint magic<format=hex>;
+    uchar skip[4];
+    utime mtime;
+    uint hash<format=hex>;
+} pyc_header<read=PycHeaderReader,size=PycHeaderSize>;
+
+string PycHeaderReader(pyc_header &header){
+    string s = "";
+    if((header.magic & 0xFF) == 0x55){
+        return "Pyc 3.8";
+    }else if((header.magic & 0xFF) == 0x61){
+        return "Pyc 3.9";
+    }else if((header.magic & 0xFF) == 0x6F){
+        return "Pyc 3.10";
+    }
+    return s;
+}
+
+int PycHeaderSize(pyc_header &header){
+    return 16;
+}
+
+
+struct pyc_object;
+
+typedef struct {
+    PY_TYPE type:7;
+    uchar flag:1;
+} pyc_type<optimize=false>;
+
+
+typedef struct {
+    uint co_argcount<fgcolor=0xEFFF0A>;
+    uint co_posonlyargcount<fgcolor=0xBFCC08>;
+    uint co_kwonlyargcount<fgcolor=0x9BA605>;
+    uint co_nlocals<fgcolor=0x01FF6F>;
+    uint co_stacksize<fgcolor=0x00CB58>;
+    uint co_flags<format=hex, fgcolor=0x009945>; //todo with flag enum
+    pyc_object co_code<bgcolor=cBlue>;
+    pyc_object co_consts<bgcolor=0xFF5315>;
+    pyc_object co_names;
+    pyc_object co_varnames;
+    pyc_object co_freevars;
+    pyc_object co_cellvars;
+    pyc_object co_filename;
+    pyc_object co_name;
+    uint co_firstlineno;
+    pyc_object co_linetable;
+} pyc_code<optimize=false>;
+
+typedef struct {
+    uint length;
+    if(length > 0) { uchar vals[length]; }
+} pyc_string<optimize=false>;
+
+typedef struct {
+    uint length;
+    pyc_object vals[length];
+} pyc_tuple<optimize=false>;
+
+
+typedef struct {
+    uchar length;
+    if(length > 0){ pyc_object vals[length]; }
+} pyc_small_tuple<optimize=false>;
+
+typedef struct {
+    uint length;
+    uchar vals[length];
+} pyc_ascii<optimize=false>;
+
+
+typedef struct {
+    uchar length;
+    uchar vals[length];
+} pyc_short_ascii<optimize=false>;
+
+typedef struct {
+    pyc_type obj_type;
+    switch(obj_type.type){
+        case TYPE_NULL:
+        case TYPE_NONE:
+        case TYPE_FALSE:
+        case TYPE_TRUE:
+        case TYPE_STOPITER:
+        case TYPE_ELLIPSIS:
+            break;
+        case TYPE_REF:
+        case TYPE_INT:
+            uint int32val;
+            break;
+        case TYPE_INT64:
+            uint64 int64val;
+            break;
+        case TYPE_FLOAT:
+            pyc_small_tuple float_tuple;
+            break;
+        case TYPE_LONG:
+
+        case TYPE_BINARY_FLOAT:
+        case TYPE_COMPLEX:
+        case TYPE_BINARY_COMPLEX:
+            Printf("unknown\n");
+            //todo
+            break;
+        case TYPE_INTERNED:
+        case TYPE_UNICODE:
+            Printf("Unicode");
+            break;
+
+        case TYPE_STRING:
+        case TYPE_ASCII:
+            pyc_string str;
+            break;
+        case TYPE_CODE:
+            pyc_code code;
+            break;
+        case TYPE_TUPLE:
+        case TYPE_LIST:
+            pyc_tuple tuple;
+            break;
+        case TYPE_DICT:
+            Printf("dict");
+            break;
+        case TYPE_SMALL_TUPLE:
+            pyc_small_tuple tuple;
+            break;
+        case TYPE_SHORT_ASCII:
+        case TYPE_SHORT_ASCII_INTERNED:
+            pyc_short_ascii ascii;
+            break;
+    }
+
+      
+} pyc_object<optimize=false>;
+
+
+pyc_header header;
+pyc_object object<optimize=false>;
